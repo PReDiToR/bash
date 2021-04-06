@@ -1,0 +1,50 @@
+#!/bin/bash
+
+rotate(){
+  case $1 in
+    bottom-up)
+      xinput set-prop 15 'Coordinate Transformation Matrix' -1 0 1 0 -1 1 0 0 1
+      xrandr --output DSI-1 --rotate inverted;;
+    normal)
+      xinput set-prop 15 'Coordinate Transformation Matrix' 1 0 0 0 1 0 0 0 1
+      xrandr --output DSI-1 --rotate normal;;
+    right-up)
+      xinput set-prop 15 'Coordinate Transformation Matrix' 0 1 0 -1 0 1 0 0 1
+      xrandr --output DSI-1 --rotate right;;
+    left-up)
+      xinput set-prop 15 'Coordinate Transformation Matrix' 0 -1 1 1 0 0 0 0 1
+      xrandr --output DSI-1 --rotate left;;
+  esac
+}
+
+#xdirection(){
+#  local xstate="$(xrandr | grep DSI-1)"
+#  if [[ $xstate == *"right ("* ]]; then echo "right-up"
+#  elif [[ $xstate == *"normal ("* ]]; then echo "normal"
+#  elif [[ $xstate ==  *"left ("* ]]; then echo "left-up"
+#  else echo "bottom-up"
+#  fi
+#}
+
+sensorvalue(){
+  local reading=$(tail /dev/shm/autorotate.log | grep 'orientation' | tail -1 | grep -oE '[^ ]+$')
+  echo "$reading"
+}
+
+killall monitor-sensor
+rm -f /dev/shm/autorotate.log
+monitor-sensor > /dev/shm/autorotate.log 2>&1 &
+sleep 2
+
+#xoutput="$(xdirection)"
+#current="$(sensorvalue)"; current=${current%?}
+#echo "xoutput "$xoutput
+#echo "current "$current
+#if [ "$xoutput" != "$current" ]; then
+#  rotate $current
+#fi
+
+while inotifywait -e modify /dev/shm/autorotate.log; do
+  current="$(sensorvalue)"; if [ -z $first ]; then current=${current%?}; first=1; fi
+  rotate $current
+done

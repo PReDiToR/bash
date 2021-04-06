@@ -1,0 +1,51 @@
+#!/bin/bash
+
+# Based on an original by Maxwell Pray (synthead), from
+# https://bbs.archlinux.org/viewtopic.php?id=107167
+# Edited for my T100TA by PReDiToR
+# Rewritten for my Miix 320 by PReDiToR
+
+# Applet writing
+# https://projects.linuxmint.com/reference/git/cinnamon-tutorials/write-applet.html
+
+
+
+#echo "screenrotate.sh: ## Starting ##" | systemd-cat -p info
+
+last="undefined"
+
+while true
+do
+
+  x=$(cat /sys/bus/iio/devices/iio\:device0/in_accel_x_raw)
+  y=$(cat /sys/bus/iio/devices/iio\:device0/in_accel_y_raw)
+
+  if  [ $x -gt 650 ]; then rotate=0
+    else rotate=2
+  fi
+
+  if [ $x -le 650 ] && [ $x -ge -650 ]; then rotate=3
+    if [ $y -le -300 ]; then rotate=1
+    fi
+  fi
+
+  if [ $last = "undefined" ]; then xstate="$(xrandr | head -n 2)"
+    if [[ $xstate == *"right ("* ]]; then last=3
+      elif [[ $xstate == *"normal ("* ]]; then last=0
+      elif [[ $xstate == *"left ("* ]]; then last=1
+      else last=2
+    fi
+  elif [ $rotate != $last ]; then xrandr -o $(( rotate * 1 ))
+    case $rotate in
+      0 ) xinput set-prop "FTSC1000:00 2808:1015" "Coordinate Transformation Matrix" 1 0 0 0 1 0 0 0 1;;
+      1 ) xinput set-prop "FTSC1000:00 2808:1015" "Coordinate Transformation Matrix" 0 -1 1 1 0 0 0 0 1;;
+      2 ) xinput set-prop "FTSC1000:00 2808:1015" "Coordinate Transformation Matrix" -1 0 1 0 -1 1 0 0 1;;
+      3 ) xinput set-prop "FTSC1000:00 2808:1015" "Coordinate Transformation Matrix" 0 1 0 -1 0 1 0 0 1;;
+    esac
+  fi
+
+  last=$rotate
+
+  sleep 3
+
+done
